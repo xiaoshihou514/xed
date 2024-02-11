@@ -1,14 +1,17 @@
 #include "globals.c"
 #include "key.c"
 #include "renderer.c"
+#include <stdbool.h>
 
 int main(int argc, char *argv[]) {
     enable_raw_mode();
     renderer_init();
-    while (1) {
+    bool quit = false;
+    while (!quit) {
         refresh_screen(&view);
-        process_input();
+        quit = process_input();
     }
+    printf("freed\n");
     renderer_cleanup();
     disable_raw_mode();
 }

@@ -36,7 +36,7 @@ void render_buf_append(const char *s) {
         buf.len *= 2;
     }
     // we add offset to the ptr to append
-    memcpy(buf.data + buf.used, s, buf.len);
+    memcpy(buf.data + buf.used, s, len);
     buf.used += len;
 }
 
