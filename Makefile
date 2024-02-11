@@ -1,3 +1,2 @@
-.RECIPEPREFIX = "    "
-main: main.c
-    $(CC) main.c -o xed -Wall -Wextra -pedantic -std=c99
+main: src/main.c
+	$(CC) src/main.c -o xed -Wall -Wextra -pedantic -std=c99
