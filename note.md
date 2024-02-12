@@ -10,5 +10,6 @@
 
 ## TODOs
 
-    - escape sequences
+    - proper rendering of windows: borders, window stack, relative line numbers...
     - gap buffer
+    - buffer

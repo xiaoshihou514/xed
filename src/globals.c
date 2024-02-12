@@ -3,9 +3,9 @@
 
 #ifndef GLOBALS_H
 #define GLOBALS_H
-// HACK: temporary
 
 // clang-format off
+// HACK: temporary
 struct Window win = {
     1,
     1,
@@ -18,6 +18,8 @@ struct Window win = {
     NULL,
 };
 struct Node n = {&win,NULL,NULL};
+
+// actual variables that would be helpful
 struct View view = {
     {
         &n,&n
@@ -25,4 +27,9 @@ struct View view = {
     &win
 };
 // clang-format on
+struct LinkedList buffers = {NULL, NULL};
+
+// 0: normal
+// 1: insert
+int mode = 0;
 #endif

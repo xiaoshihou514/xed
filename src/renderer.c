@@ -1,3 +1,4 @@
+#include "globals.c"
 #include "typedefs.h"
 #include "utils.c"
 #include <ctype.h>
@@ -141,6 +142,14 @@ void refresh_screen(struct View *view) {
     // render cursor pos
     char cursor_cmd[16];
     SET_CURSOR(cursor_cmd, state.cursor_row, state.cursor_col);
+    switch (mode) {
+    case 0:
+        defer_command(BLOCK_CURSOR);
+        break;
+    case 1:
+        defer_command(LINE_CURSOR);
+        break;
+    }
     defer_command(cursor_cmd);
     defer_command(SHOW_CURSOR);
     render_buf_flush();
