@@ -13,6 +13,7 @@ struct Node {
 };
 
 struct View {
+    // TODO: window stack, since windows could be on top of each other
     // a list of windows... for now
     struct LinkedList windows;
     struct Window *focused;

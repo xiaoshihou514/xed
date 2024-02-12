@@ -16,8 +16,8 @@ struct RenderBuffer {
     int used;
 };
 struct RenderState {
-    int term_height;
-    int term_width;
+    int term_cols;
+    int term_rows;
     int cursor_row;
     int cursor_col;
     struct RenderBuffer buf;
@@ -50,6 +50,9 @@ void render_buf_flush() {
 #define GOTO_LEFT_TOP "\x1b[H"
 #define HIDE_CURSOR "\x1b[?25l"
 #define SHOW_CURSOR "\x1b[?25h"
+#define BLOCK_CURSOR "\x1b[2 q"
+#define UNDERLINE_CURSOR "\x1b[4 q"
+#define LINE_CURSOR "\x1b[6 q"
 /// PRE: buf size is 16
 char *SET_CURSOR(char *buf, int row, int col) {
     snprintf(buf, 16, "\x1b[%d;%dH", row, col);
@@ -86,8 +89,8 @@ void renderer_init() {
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) {
         panic("getting terminal dimensions");
     } else {
-        state.term_width = ws.ws_col;
-        state.term_height = ws.ws_row;
+        state.term_rows = ws.ws_row;
+        state.term_cols = ws.ws_col;
     }
 }
 
@@ -109,17 +112,20 @@ void refresh_screen(struct View *view) {
     // clear the screen and hide cursor
     defer_command(HIDE_CURSOR);
     defer_command(CLEAR);
+    // for rendering purposes
+    defer_command(GOTO_LEFT_TOP);
 
     // render line after line
-    struct LinkedList windows = view->windows;
     // look, I promise these are pointers to windows
-    struct Node *win = (struct Node *)windows.head;
-    for (int row = 1; row <= state.term_height; row++) {
-        while (win != NULL) {
-            if (window_has_content_on_line(win->element, row)) {
-                window_render_line(win->element, row);
+    struct Node *head = (struct Node *)view->windows.head;
+    for (int row = 1; row <= state.term_rows; row++) {
+        struct Node *node = head;
+        // TODO: window stack and window borders
+        while (node != NULL) {
+            if (window_has_content_on_line(node->element, row)) {
+                window_render_line(node->element, row);
             }
-            win = win->next;
+            node = node->next;
         }
         render_buf_append("\r\n");
     }

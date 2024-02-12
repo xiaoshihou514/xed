@@ -1,6 +1,8 @@
 #include "stdio.h"
 #include "typedefs.h"
 
+#ifndef GLOBALS_H
+#define GLOBALS_H
 // HACK: temporary
 
 // clang-format off
@@ -23,3 +25,4 @@ struct View view = {
     &win
 };
 // clang-format on
+#endif

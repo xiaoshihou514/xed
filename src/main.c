@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
         refresh_screen(&view);
         quit = process_input();
     }
-    printf("freed\n");
     renderer_cleanup();
     disable_raw_mode();
+    return 0;
 }
