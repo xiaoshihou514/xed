@@ -4,14 +4,12 @@
 #include <stdbool.h>
 
 int main(int argc, char *argv[]) {
+    init_globals(argc, argv);
     enable_raw_mode();
-    renderer_init();
-    bool quit = false;
-    while (!quit) {
-        refresh_screen(&view);
-        quit = process_input();
+    while (!SHOULD_EXIT) {
+        process_keys();
+        refresh_screen();
     }
-    renderer_cleanup();
     disable_raw_mode();
     return 0;
 }
