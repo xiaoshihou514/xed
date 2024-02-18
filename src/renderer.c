@@ -3,11 +3,14 @@
 #include "objs/resizable_buffer.c"
 #include "objs/window.c"
 #include "utils.c"
+#include <stdbool.h>
+#include <stdlib.h>
 #include <termios.h>
 
 // data
 struct termios default_termios;
 struct ResizableBuffer canvas;
+bool *render_table;
 
 // reset terminal behaviour
 void disable_raw_mode() {
@@ -38,14 +41,24 @@ void enable_raw_mode() {
     // printf("\x1b[?1049h\x1b[0m\x1b[2J\x1b[?1003h\x1b[?1015h\x1b[?1006h\x1b[?25l");
 }
 
+void renderer_init() {
+    canvas = rbuf_new();
+    render_table = malloc(term_height * term_width);
+}
+
+void renderer_cleanup() {
+    rbuf_free(&canvas);
+    free(render_table);
+}
+
 // draw the screen according to context
 void refresh_screen() {
     struct Node *node = focused_view.win_stack.head;
-    for (int line = 1; line <= term_height; line++) {
-        struct LinkedList segs = line_segs_new(term_width);
-        while (node != NULL) {
-            struct Window *win = node->val;
-            window_render_segments(win, &canvas, line, &segs);
-        }
+    struct LinkedList segs = line_segs_new(term_width);
+    while (node != NULL) {
+        struct Window *win = node->val;
+        win_render(win, &canvas, render_table, term_height, term_width);
+        node = node->next;
     }
+    rbuf_flush(&canvas);
 }

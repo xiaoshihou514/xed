@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -35,6 +36,18 @@ void rbuf_flush(struct ResizableBuffer *rbuf) {
     // we don't need to clean the buffer because when we write we only write
     // that many bytes
     rbuf->used = 0;
+}
+
+void rbuf_ensure_space(struct ResizableBuffer *rbuf, int required) {
+    while (rbuf->size - rbuf->used < required) {
+        rbuf->data = realloc(rbuf->data, rbuf->size * 2);
+    }
+}
+
+void rbuf_write_move_cursor_command(struct ResizableBuffer *rbuf, int row,
+                                    int col) {
+    rbuf_ensure_space(rbuf, 16);
+    sprintf(rbuf->data, "\x1b[%d;%dH", row, col);
 }
 
 void rbuf_free(struct ResizableBuffer *rbuf) { free(rbuf->data); }

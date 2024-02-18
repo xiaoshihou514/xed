@@ -92,4 +92,12 @@ struct Buffer buffer_new() {
     return (struct Buffer){&gb, NULL};
 }
 
+void buffer_free(struct Buffer *buffer) {
+    if (buffer->gb != NULL) {
+        free(buffer->gb);
+    } else {
+        // TODO: not implemented yet
+    }
+}
+
 #endif

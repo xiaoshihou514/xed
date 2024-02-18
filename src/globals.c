@@ -16,6 +16,7 @@ int term_height;
 int term_width;
 
 void init_globals(int argc, char *argv[]) {
+    // get terminal dimensions
     struct winsize ws;
 
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
@@ -33,7 +34,19 @@ void init_globals(int argc, char *argv[]) {
     }
 }
 
-// TODO: clean up after ourselves
-void free_all_buffers();
+void free_all_buffers() {
+    struct Node *n1 = views.head;
+    while (n1 != NULL) {
+        struct View *view = n1->val;
+        struct LinkedList wins = view->win_stack;
+        struct Node *n2 = wins.head;
+        while (n2 != NULL) {
+            struct Window *win = n2->val;
+            buffer_free(win->buffer);
+            n2 = n2->next;
+        }
+        n1 = n1->next;
+    }
+}
 
 #endif
