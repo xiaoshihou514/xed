@@ -11,5 +11,6 @@ int main(int argc, char *argv[]) {
         refresh_screen();
     }
     disable_raw_mode();
+    free_all_buffers();
     return 0;
 }

@@ -1,4 +1,4 @@
-#include "objs/linkedlist.c"
+#include "objs/linked_list.c"
 #include "objs/view.c"
 #include "utils.c"
 #include <stdbool.h>

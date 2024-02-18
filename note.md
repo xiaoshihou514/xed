@@ -10,6 +10,7 @@
 
 ## TODOs
 
-    - proper rendering of windows: borders, window stack, relative line numbers...
+    - utf-8 support
     - gap buffer
     - buffer
+    - proper rendering of windows: borders, window stack, relative line numbers...

@@ -1,4 +1,7 @@
+#include "globals.c"
+#include "objs/line_segment.c"
 #include "objs/resizable_buffer.c"
+#include "objs/window.c"
 #include "utils.c"
 #include <termios.h>
 
@@ -37,5 +40,12 @@ void enable_raw_mode() {
 
 // draw the screen according to context
 void refresh_screen() {
-    // TODO
+    struct Node *node = focused_view.win_stack.head;
+    for (int line = 1; line <= term_height; line++) {
+        struct LinkedList segs = line_segs_new(term_width);
+        while (node != NULL) {
+            struct Window *win = node->val;
+            window_render_segments(win, &canvas, line, &segs);
+        }
+    }
 }

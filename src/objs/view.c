@@ -1,4 +1,4 @@
-#include "linkedlist.c"
+#include "linked_list.c"
 #include "window.c"
 
 #ifndef _VIEW_C
