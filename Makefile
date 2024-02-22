@@ -1,10 +1,13 @@
 .PHONY: main debug run
 
 main:
-	$(CC) src/main.c -o xed -Wall -Wextra -pedantic -std=c99
+	gcc src/main.c -o xed -Wall -Wextra -pedantic -std=c2x
 
 debug:
-	$(CC) src/main.c -g -Og -o xed -Wall -Wextra -pedantic -std=c99
+	gcc src/main.c -g -Og -o xed -Wall -Wextra -pedantic -std=c2x
+check:
+	scan-build clang src/main.c
+	splint src/main.c | less
 
 run: main
 	./xed

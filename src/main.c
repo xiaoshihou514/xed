@@ -1,7 +1,6 @@
 #include "globals.c"
 #include "key.c"
 #include "renderer.c"
-#include <stdbool.h>
 
 int main(int argc, char *argv[]) {
     init_globals(argc, argv);

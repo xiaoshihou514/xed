@@ -6,17 +6,19 @@
 #ifndef _RESIZABLE_BUFFER_C
 #define _RESIZABLE_BUFFER_C
 
-struct ResizableBuffer {
+typedef struct {
     char *data;
     int size;
     int used;
-};
+} ResizableBuffer;
 
-struct ResizableBuffer rbuf_new() {
-    return (struct ResizableBuffer){malloc(1024), 1024, 0};
+const size_t INITIAL_SIZE = 1024;
+
+ResizableBuffer rbuf_new() {
+    return (ResizableBuffer){malloc(INITIAL_SIZE), INITIAL_SIZE, 0};
 }
 
-void rbuf_append(struct ResizableBuffer *rbuf, const char *contents) {
+void rbuf_append(ResizableBuffer *rbuf, const char *contents) {
     int len = strlen(contents);
     int needed_size = len + rbuf->used;
     if (needed_size > rbuf->size) {
@@ -31,25 +33,24 @@ void rbuf_append(struct ResizableBuffer *rbuf, const char *contents) {
     rbuf->used += len;
 }
 
-void rbuf_flush(struct ResizableBuffer *rbuf) {
+void rbuf_flush(ResizableBuffer *rbuf) {
     write(STDIN_FILENO, rbuf->data, rbuf->used);
     // we don't need to clean the buffer because when we write we only write
     // that many bytes
     rbuf->used = 0;
 }
 
-void rbuf_ensure_space(struct ResizableBuffer *rbuf, int required) {
+void rbuf_ensure_space(ResizableBuffer *rbuf, int required) {
     while (rbuf->size - rbuf->used < required) {
         rbuf->data = realloc(rbuf->data, rbuf->size * 2);
     }
 }
 
-void rbuf_write_move_cursor_command(struct ResizableBuffer *rbuf, int row,
-                                    int col) {
+void rbuf_write_move_cursor_command(ResizableBuffer *rbuf, int row, int col) {
     rbuf_ensure_space(rbuf, 16);
     sprintf(rbuf->data, "\x1b[%d;%dH", row, col);
 }
 
-void rbuf_free(struct ResizableBuffer *rbuf) { free(rbuf->data); }
+void rbuf_free(ResizableBuffer *rbuf) { free(rbuf->data); }
 
 #endif

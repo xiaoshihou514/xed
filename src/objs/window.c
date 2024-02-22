@@ -1,15 +1,12 @@
 #include "buffer.c"
-#include "line_segment.c"
 #include "linked_list.c"
 #include "resizable_buffer.c"
-#include <stdbool.h>
-#include <stdio.h>
 
 #ifndef _WINDOW_C
 #define _WINDOW_C
 
-struct Window {
-    struct Buffer *buffer;
+typedef struct {
+    Buffer *buffer;
     int anchor_row;
     int anchor_col;
     int height;
@@ -19,12 +16,12 @@ struct Window {
     int cursor_row;
     int cursor_col;
     // TODO: statuscol
-};
+} Window;
 
-struct Window scratch_win(int term_width, int term_height) {
-    struct Buffer buffer = buffer_new();
+Window scratch_win(int term_width, int term_height) {
+    Buffer buffer = buffer_new();
     // clang-format off
-    return (struct Window) {
+    return (Window) {
         &buffer,
         1,
         1,
@@ -38,8 +35,8 @@ struct Window scratch_win(int term_width, int term_height) {
     // clang-format on
 }
 
-void win_render(struct Window *win, struct ResizableBuffer *rbuf,
-                bool *occupied, int term_height, int term_width) {
+void win_render(Window *win, ResizableBuffer *rbuf, bool *occupied,
+                int term_height, int term_width) {
     int row_start = win->anchor_row;
     int row_end = win->anchor_row + win->height;
     int col_start = win->anchor_col;
@@ -144,6 +141,6 @@ void win_render(struct Window *win, struct ResizableBuffer *rbuf,
     }
 }
 
-char *win_get_display_char(struct Window *win, int row, int col);
+char *win_get_display_char(Window *win, int row, int col);
 
 #endif
