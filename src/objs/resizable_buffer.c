@@ -14,8 +14,9 @@ typedef struct {
 
 const size_t INITIAL_SIZE = 1024;
 
-ResizableBuffer rbuf_new() {
-    return (ResizableBuffer){malloc(INITIAL_SIZE), INITIAL_SIZE, 0};
+ResizableBuffer rbuf_new(void) {
+    return (ResizableBuffer){
+        .data = malloc(INITIAL_SIZE), .size = INITIAL_SIZE, .used = 0};
 }
 
 void rbuf_append(ResizableBuffer *rbuf, const char *contents) {

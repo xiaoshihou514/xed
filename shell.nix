@@ -2,9 +2,10 @@
 
 pkgs.mkShell {
   buildInputs = [
-    pkgs.clang_17
+    pkgs.clang-tools_17
   ];
   shellHook = ''
+    export PATH=$PATH:${pkgs.clang-tools}/bin
     exec fish
   '';
 }

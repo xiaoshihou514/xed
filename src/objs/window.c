@@ -20,19 +20,17 @@ typedef struct {
 
 Window scratch_win(int term_width, int term_height) {
     Buffer buffer = buffer_new();
-    // clang-format off
-    return (Window) {
-        &buffer,
-        1,
-        1,
-        term_height,
-        term_width,
-        0,
-        0,
-        5,
-        5,
+    return (Window){
+        .buffer = &buffer,
+        .anchor_row = 1,
+        .anchor_col = 1,
+        .height = term_height,
+        .width = term_width,
+        .rowoff = 0,
+        .coloff = 0,
+        .cursor_row = 5,
+        .cursor_col = 5,
     };
-    // clang-format on
 }
 
 void win_render(Window *win, ResizableBuffer *rbuf, bool *occupied,

@@ -10,34 +10,37 @@
 // on 64 bit machines they are both 8 bytes
 typedef struct {
     char *data;
-    size_t gap_start;
-    size_t gap_end;
+    size_t start_offset;
+    size_t end_offset;
     size_t size;
 } GapBuffer;
 
+// originally I thought maybe we could differentiate between RW
+// buffers and RO buffers, but since you would need set_text
+// and set_line for them anyway it seems redundant
 typedef struct {
-    // RW buffers
     GapBuffer *gb;
-    // RO buffers
-    char **lines;
 } Buffer;
 
 // TODO: insertion, get lines, etc.
 
 // Gap buffer related functions
 GapBuffer gap_buffer_new(size_t size) {
-    return (GapBuffer){malloc(size), 0, size, size};
+    return (GapBuffer){.data = malloc(size),
+                       .start_offset = 0,
+                       .end_offset = size,
+                       .size = size};
 }
 
 void gap_buffer_shift_cursor(GapBuffer *gb, size_t dest) {
-    size_t gap_len = gb->gap_end - gb->gap_start;
+    size_t gap_len = gb->end_offset - gb->start_offset;
     // TODO: why don't I need a reallocation here?
     // can't move outta bounds!
     dest = (dest < gb->size - gap_len) ? dest : gb->size - gap_len;
 
-    if (dest == gb->gap_start)
+    if (dest == gb->start_offset)
         return;
-    if (gb->gap_start < dest) {
+    if (gb->start_offset < dest) {
         // gap starts before dest
         // move some contents after the gap backwards so that gap_start is the
         // destination specified
@@ -49,10 +52,10 @@ void gap_buffer_shift_cursor(GapBuffer *gb, size_t dest) {
         // after:
         // [1234]|          [567]
         //       <-- gap -->
-        size_t delta = dest - gb->gap_start;
-        memcpy(gb->data + gb->gap_start, gb->data + gb->gap_end, delta);
-        gb->gap_start += delta;
-        gb->gap_end += delta;
+        size_t delta = dest - gb->start_offset;
+        memcpy(gb->data + gb->start_offset, gb->data + gb->end_offset, delta);
+        gb->start_offset += delta;
+        gb->end_offset += delta;
     } else {
         // gap starts after dest
         // similarly:
@@ -64,40 +67,63 @@ void gap_buffer_shift_cursor(GapBuffer *gb, size_t dest) {
         // after:
         // [1]|           [234567]
         //     <-- gap -->
-        size_t delta = gb->gap_start - dest;
-        memcpy(gb->data + gb->gap_end - delta, gb->data + dest, delta);
-        gb->gap_start -= delta;
-        gb->gap_end -= delta;
+        size_t delta = gb->start_offset - dest;
+        memcpy(gb->data + gb->end_offset - delta, gb->data + dest, delta);
+        gb->start_offset -= delta;
+        gb->end_offset -= delta;
     }
 }
 
-// TODO
-void gap_buffer_ensure_gap_size(GapBuffer *gb, size_t size) {}
+void gap_buffer_ensure_gap_size(GapBuffer *gb, size_t size) {
+    size_t gap_end = gb->end_offset;
+    size_t gap_size = gap_end - gb->start_offset;
+    if (gap_size < size) {
+        size_t total_size = gb->size;
+        while (gap_size < size) {
+            gap_size += total_size;
+            total_size *= 2;
+        }
+        gb->data = realloc(gb->data, total_size);
+
+        // before:
+        // [12]    [7890]
+        //         ^
+        //         gap_end
+        // after:
+        //    gb->data + gap_start + gap_size
+        //				    v
+        // [12]             [7890]
+        //         ^-------^ newly allocated
+        //    gap_start + gap_size
+
+        memcpy(gb->data + gap_end, gb->data + gb->start_offset + gap_size,
+               gb->size - gap_end);
+
+        // update gap_end and size
+        gb->end_offset = gb->start_offset + gap_size;
+        gb->size = total_size;
+    }
+}
 
 // insert in the gap buffer
-void gap_buffer_insert(GapBuffer *gb, size_t location, char c) {
-    gap_buffer_ensure_gap_size(gb, 1);
+void gap_buffer_insert(GapBuffer *gb, size_t location, char *data,
+                       size_t length) {
     gap_buffer_shift_cursor(gb, location);
-    gb->data[gb->gap_start] = c;
-    gb->gap_start++;
+    gap_buffer_ensure_gap_size(gb, length);
+    memcpy(data, gb->data + gb->start_offset + location, length);
+    gb->start_offset += length;
 }
 
 void gap_buffer_free(GapBuffer *gb) { free(gb->data); }
 
 // buffer related functions
 // returns a writable buffer
-Buffer buffer_new() {
+Buffer buffer_new(void) {
     // this is a damn scratch buffer, it shouldn't need to to be too big
     GapBuffer gb = gap_buffer_new(4096);
-    return (Buffer){&gb, nullptr};
+    return (Buffer){.gb = &gb};
 }
 
-void buffer_free(Buffer *buffer) {
-    if (buffer->gb != nullptr) {
-        free(buffer->gb);
-    } else {
-        // TODO: not implemented yet
-    }
-}
+void buffer_free(Buffer *buffer) { free(buffer->gb); }
 
 #endif

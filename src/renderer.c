@@ -11,13 +11,13 @@ ResizableBuffer canvas;
 bool *render_table;
 
 // reset terminal behaviour
-void disable_raw_mode() {
+void disable_raw_mode(void) {
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &default_termios) == -1)
         panic("disable raw mode");
 }
 
 // tells the terminal how we want to get the input
-void enable_raw_mode() {
+void enable_raw_mode(void) {
     if (tcgetattr(STDIN_FILENO, &default_termios) == -1)
         panic("enable raw mode");
 
@@ -39,18 +39,18 @@ void enable_raw_mode() {
     // printf("\x1b[?1049h\x1b[0m\x1b[2J\x1b[?1003h\x1b[?1015h\x1b[?1006h\x1b[?25l");
 }
 
-void renderer_init() {
+void renderer_init(void) {
     canvas = rbuf_new();
     render_table = malloc(term_height * term_width);
 }
 
-void renderer_cleanup() {
+void renderer_cleanup(void) {
     rbuf_free(&canvas);
     free(render_table);
 }
 
 // draw the screen according to context
-void refresh_screen() {
+void refresh_screen(void) {
     Node *node = focused_view.win_stack.head;
     while (node) {
         Window *win = node->val;

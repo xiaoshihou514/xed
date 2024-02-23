@@ -12,7 +12,7 @@ typedef struct {
 // TODO
 View view_new(int term_width, int term_height) {
     Window win = scratch_win(term_width, term_height);
-    View view = {llist_new(&win), &win};
+    View view = {.win_stack = llist_new(&win), .focused = &win};
     return view;
 }
 

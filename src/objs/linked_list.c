@@ -17,8 +17,8 @@ typedef struct {
 } LinkedList;
 
 LinkedList llist_new(void *initial_val) {
-    Node node = {initial_val, nullptr, nullptr};
-    return (LinkedList){&node, &node};
+    Node node = {.val = initial_val, .next = nullptr, .prev = nullptr};
+    return (LinkedList){.head = &node, .tail = &node};
 }
 
 void llist_push(void *val, LinkedList *llist) {

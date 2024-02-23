@@ -33,7 +33,7 @@ void init_globals(int argc, char *argv[]) {
     }
 }
 
-void free_all_buffers() {
+void free_all_buffers(void) {
     Node *n1 = views.head;
     while (n1) {
         View *view = n1->val;
