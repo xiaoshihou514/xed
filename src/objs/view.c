@@ -10,10 +10,23 @@ typedef struct {
 } View;
 
 // TODO
-View view_new(int term_width, int term_height) {
+View *view_new(int term_width, int term_height) {
     Window win = scratch_win(term_width, term_height);
-    View view = {.win_stack = llist_new(&win), .focused = &win};
+    // TODO: llist_new(&win) is not working
+    View *view = (View *)malloc(sizeof(View));
+    view->win_stack = llist_new(&win);
+    view->focused = &win;
     return view;
+}
+
+void view_free(View *view) {
+    LinkedList wins = view->win_stack;
+    Node *n2 = wins.head;
+    while (n2) {
+        Window *win = n2->val;
+        window_free(win);
+        n2 = n2->next;
+    }
 }
 
 #endif

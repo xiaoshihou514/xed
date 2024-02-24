@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
         refresh_screen();
     }
     renderer_cleanup();
-    free_all_buffers();
+    free_all_views();
     disable_raw_mode();
     return 0;
 }

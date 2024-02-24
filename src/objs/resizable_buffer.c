@@ -19,8 +19,7 @@ ResizableBuffer rbuf_new(void) {
         .data = malloc(INITIAL_SIZE), .size = INITIAL_SIZE, .used = 0};
 }
 
-void rbuf_append(ResizableBuffer *rbuf, const char *contents) {
-    int len = strlen(contents);
+void rbuf_append(ResizableBuffer *rbuf, const char *contents, size_t len) {
     int needed_size = len + rbuf->used;
     if (needed_size > rbuf->size) {
         int size = rbuf->size;
@@ -35,7 +34,7 @@ void rbuf_append(ResizableBuffer *rbuf, const char *contents) {
 }
 
 void rbuf_flush(ResizableBuffer *rbuf) {
-    write(STDIN_FILENO, rbuf->data, rbuf->used);
+    write(STDOUT_FILENO, rbuf->data, rbuf->used);
     // we don't need to clean the buffer because when we write we only write
     // that many bytes
     rbuf->used = 0;
@@ -53,5 +52,7 @@ void rbuf_write_move_cursor_command(ResizableBuffer *rbuf, int row, int col) {
 }
 
 void rbuf_free(ResizableBuffer *rbuf) { free(rbuf->data); }
+
+void rbuf_lazy_clear(ResizableBuffer *rbuf) { rbuf->used = 0; }
 
 #endif

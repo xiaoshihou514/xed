@@ -1,3 +1,4 @@
+#include "resizable_buffer.c"
 #include "stddef.h"
 #include <stdlib.h>
 #include <string.h>
@@ -125,5 +126,44 @@ Buffer buffer_new(void) {
 }
 
 void buffer_free(Buffer *buffer) { free(buffer->gb); }
+
+wchar_t *buffer_get_line(Buffer *buf, int row, size_t *length) {
+    size_t count = 0;
+    size_t line_count = 0;
+    size_t mark = 0;
+    bool crosses_gap = false;
+    GapBuffer *gb = buf->gb;
+
+    while (line_count < row && count < gb->size) {
+        if (gb->data[count] == '\n') {
+            line_count++;
+            mark = count;
+        }
+        if (count == gb->start_offset)
+            count = gb->end_offset;
+        else
+            count++;
+    }
+    if (line_count != row || count == mark)
+        // nothing here!
+        return nullptr;
+    size_t size = count - mark;
+    wchar_t *linebuf = malloc(size);
+    // don't forget \0!
+    // TODO: this almost certainly does not work either
+    if (crosses_gap) {
+        size_t len = gb->start_offset - mark;
+        memcpy(linebuf, gb->data + mark, len);
+        memcpy(linebuf + len, gb->data + gb->end_offset, size - len);
+    } else {
+        memcpy(linebuf, gb->data + mark, size);
+    }
+    linebuf[size - 1] = '\0';
+    *length = size;
+    return linebuf;
+}
+
+// gets the byte position of the desired line in the gap buffer
+void buffer_get_line_indices(Buffer *buf, int row);
 
 #endif

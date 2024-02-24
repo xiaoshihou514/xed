@@ -2,6 +2,7 @@
 #include "objs/resizable_buffer.c"
 #include "objs/window.c"
 #include "utils.c"
+#include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 
