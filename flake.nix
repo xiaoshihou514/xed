@@ -15,8 +15,13 @@
         {
           devShells.default = mkShell {
             buildInputs = [
+              # -std=c2x
+              pkgs.gcc13
+              # for clangd 17, which has -std=c2x support
               pkgs.clang-tools_17
-              pkgs.libvterm
+
+              # libraries
+              # pkgs.libvterm
             ];
             shellHook = ''
               export PATH=$PATH:${pkgs.clang-tools}/bin
