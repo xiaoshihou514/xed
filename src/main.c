@@ -1,3 +1,4 @@
+#include "lib/linked_list.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
@@ -14,51 +15,6 @@ typedef struct {
     int width;
     int height;
 } Box;
-
-// linked list
-struct _Node {
-    void *val;
-    struct _Node *next;
-    struct _Node *prev;
-};
-
-typedef struct _Node Node;
-
-typedef struct {
-    Node *head;
-    Node *tail;
-} LinkedList;
-
-void llist_push(LinkedList llist[static 1], void *element) {
-    Node *new = malloc(sizeof(Node));
-    *new = ((Node){.val = element, .prev = llist->tail, .next = nullptr});
-    if (llist->head == nullptr) {
-        llist->head = new;
-        llist->tail = new;
-        return;
-    }
-    llist->tail->next = new;
-    llist->tail = new;
-}
-
-void llist_free(LinkedList llist[static 1]) {
-    Node *node = llist->head;
-    while (node) {
-        Node *temp = node;
-        node = node->next;
-        free(temp);
-    }
-    llist->head = nullptr;
-    llist->tail = nullptr;
-}
-
-#define llist_forall(llist, f, type, ...)                                      \
-    for (Node *current = llist.head; current != nullptr;                       \
-         current = current->next)                                              \
-        f((type *)current->val, __VA_ARGS__);
-
-#define llist_new                                                              \
-    { .head = nullptr, .tail = nullptr }
 
 // draw
 bool occupied_at(int row, int col, bool occupied[static 1]) {
@@ -169,7 +125,7 @@ int main() {
         panic("tcsetattr");
 
     char c;
-    bool quit;
+    bool quit = false;
     while (!quit) {
         c = ' ';
         read(STDIN_FILENO, &c, 1);

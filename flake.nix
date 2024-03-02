@@ -21,7 +21,8 @@
               pkgs.clang-tools_17
 
               # libraries
-              # pkgs.libvterm
+              # unit test framework
+              criterion
             ];
             shellHook = ''
               export PATH=$PATH:${pkgs.clang-tools}/bin
