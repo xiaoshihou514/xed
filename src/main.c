@@ -98,6 +98,7 @@ void resize_box(Box *b, double h_factor, double w_factor) {
 
 // main
 int main() {
+    setlocale(LC_ALL, "C.UTF-8");
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
         panic("get terminal dimensions");
@@ -106,10 +107,6 @@ int main() {
     int grid_num = (term_height * term_width);
     occupied = malloc(grid_num * sizeof(bool));
     grid = malloc(grid_num * sizeof(wchar_t));
-
-    // clear screen
-    printf("\x1b[2J");
-    printf("\x1b[H");
 
     // hide cursor
     printf("\x1b[?25l");
@@ -155,6 +152,8 @@ int main() {
         if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
             panic("get terminal dimensions");
         if (term_height != ws.ws_row + 1 || term_width != ws.ws_col) {
+            term_height = ws.ws_row + 1;
+            term_width = ws.ws_col + 1;
             int grid_num = term_height * term_width;
             occupied = malloc(grid_num * sizeof(bool));
             grid = malloc(grid_num * sizeof(wchar_t));
@@ -187,14 +186,13 @@ int main() {
         printf("\x1b[2J");
         printf("\x1b[H");
         llist_forall(windows, grid_render, Box);
-        setlocale(LC_ALL, "C.UTF-8");
         for (int row = 1; row < term_height; row++) {
             for (int col = 1; col < term_width; col++) {
                 wchar_t wc = grid_get_wchar(row, col);
                 if (wc != L'\0')
-                    putwchar(wc);
+                    printf("%lc", wc);
             }
-            putchar('\n');
+            printf("\r\n");
         }
     }
     free(occupied);
