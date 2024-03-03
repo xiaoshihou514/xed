@@ -27,7 +27,7 @@ $(LIBDESTDIR)/%.o: src/lib/%.c
 
 # build tests, we are targeting on lib files so we would build that first
 test: $(TESTBINS)
-	for test in $(TESTBINS) ; do ./$$test ; done
+	for test in $(TESTBINS) ; do ./$$test --verbose -j0 -f ; done
 # build rules for every test
 $(TESTDESTDIR)/%: tests/%.c lib
 	# we need to compile with our lib files and our test framework
@@ -44,7 +44,7 @@ run: main
 
 # compile and run with debug info
 debug: lib
-	$(CC) $(CFLAGS) -g src/main.c $(OBJS) -o xed
+	$(CC) $(CFLAGS) -g src/main.c $(LIBOBJS) -o xed
 	gdb ./xed
 
 clean:

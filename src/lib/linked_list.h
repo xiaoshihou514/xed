@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #ifndef _LINKED_LIST_C
 #define _LINKED_LIST_C
 
@@ -10,6 +12,7 @@ struct _Node {
 typedef struct _Node Node;
 
 typedef struct {
+    size_t size;
     Node *head;
     Node *tail;
 } LinkedList;
@@ -25,19 +28,24 @@ void llist_push(LinkedList llist[static 1], void *element);
 void llist_free(LinkedList llist[static 1]);
 
 /*
+ * remove a node from arbitray linked list and returns the next element
+ */
+void llist_remove(LinkedList llist[static 1], Node node[static 1]);
+
+/*
  * creates an empty linked list
  */
 #define llist_new                                                              \
-    (LinkedList) { .head = nullptr, .tail = nullptr }
+    (LinkedList) { .size = 0, .head = nullptr, .tail = nullptr }
 
 /*
  * iterate over a linked list with a function
  * you have to provide the function pointer, the type for items in the linked
- * list, and extra arguments
+ * list, and (optionally) extra arguments
  */
 #define llist_forall(llist, f, type, ...)                                      \
     for (Node *current = llist.head; current != nullptr;                       \
          current = current->next)                                              \
-        f((type *)current->val, __VA_ARGS__);
+        f((type *)current->val, ##__VA_ARGS__);
 
 #endif

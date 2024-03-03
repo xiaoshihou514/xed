@@ -1,13 +1,18 @@
 #include "lib/linked_list.h"
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
+#include <wchar.h>
 
 // data
 int term_width;
 int term_height;
+bool *occupied;
+wchar_t *grid;
 
 typedef struct {
     int arow;
@@ -22,44 +27,55 @@ bool occupied_at(int row, int col, bool occupied[static 1]) {
     return occupied[term_width * (row - 1) + col - 1];
 }
 
-void occupy(int row, int col, bool occupied[static 1]) {
+void occupy(int row, int col) {
     occupied[term_width * (row - 1) + col - 1] = true;
 }
 
-void maybe_draw(int row, int col, const char thing[static 1],
-                bool occupied[static 1]) {
+void grid_put_wchar(int row, int col, const wchar_t thing) {
+    grid[term_width * (row - 1) + col - 1] = thing;
+}
+
+wchar_t grid_get_wchar(int row, int col) {
+    return grid[(row - 1) * term_width + col - 1];
+}
+
+void maybe_draw(int row, int col, const wchar_t thing) {
     if (row < 1 || row >= term_height)
         return;
     if (col < 1 || col >= term_width)
         return;
     if (!occupied_at(row, col, occupied)) {
-        printf("\x1b[%d;%dH", row, col);
-        printf("%s", thing);
-        occupy(row, col, occupied);
+        occupy(row, col);
+        grid_put_wchar(row, col, thing);
     }
 }
 
-void draw(Box box[static 1], bool occupied[static 1]) {
+void grid_render(Box box[static 1]) {
     // goto anchor
-    maybe_draw(box->arow, box->acol, "┍", occupied);
-    for (int i = 1; i < box->width; i++) {
-        maybe_draw(box->arow, box->acol + i, "━", occupied);
+    // TODO: handle resize
+    int arow = box->arow;
+    int acol = box->acol;
+    int height = box->height;
+    int width = box->width;
+    maybe_draw(arow, acol, L'┍');
+    for (int i = 1; i < width; i++) {
+        maybe_draw(arow, acol + i, L'━');
     }
-    maybe_draw(box->arow, box->acol + box->width, "┑", occupied);
+    maybe_draw(arow, acol + width, L'┑');
 
-    for (int i = box->arow + 1; i < box->arow + box->height; i++) {
-        maybe_draw(i, box->acol, "│", occupied);
-        for (int j = box->acol + 1; j < box->acol + box->width; j++) {
-            maybe_draw(i, j, " ", occupied);
+    for (int i = arow + 1; i < arow + height; i++) {
+        maybe_draw(i, acol, L'│');
+        for (int j = acol + 1; j < acol + width; j++) {
+            maybe_draw(i, j, L' ');
         }
-        maybe_draw(i, box->acol + box->width, "│", occupied);
+        maybe_draw(i, acol + width, L'│');
     }
 
-    maybe_draw(box->arow + box->height, box->acol, "┕", occupied);
-    for (int i = 1; i < box->width; i++) {
-        maybe_draw(box->arow + box->height, box->acol + i, "━", occupied);
+    maybe_draw(arow + height, acol, L'┕');
+    for (int i = 1; i < width; i++) {
+        maybe_draw(arow + height, acol + i, L'━');
     }
-    maybe_draw(box->arow + box->height, box->acol + box->width, "┙", occupied);
+    maybe_draw(arow + height, acol + width, L'┙');
 
     // goto left bottom
     printf("\x1b[%d;%dH", term_height, 1);
@@ -75,14 +91,21 @@ void panic(const char *reason) {
     exit(1);
 }
 
+void resize_box(Box *b, double h_factor, double w_factor) {
+    b->width = (int)(b->width * w_factor);
+    b->height = (int)(b->height * h_factor);
+}
+
 // main
 int main() {
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
         panic("get terminal dimensions");
     term_height = ws.ws_row + 1;
-    term_width = ws.ws_col;
-    bool *occupied = malloc((term_height * term_width) * sizeof(bool));
+    term_width = ws.ws_col + 1;
+    int grid_num = (term_height * term_width);
+    occupied = malloc(grid_num * sizeof(bool));
+    grid = malloc(grid_num * sizeof(wchar_t));
 
     // clear screen
     printf("\x1b[2J");
@@ -106,7 +129,7 @@ int main() {
                              .width = term_width,
                              .height = term_height,
                          });
-    llist_forall(windows, draw, Box, occupied);
+    llist_forall(windows, grid_render, Box);
 
     // enable raw mode
     struct termios original;
@@ -124,9 +147,21 @@ int main() {
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
         panic("tcsetattr");
 
+    // main loop
     char c;
     bool quit = false;
     while (!quit) {
+        // handle resize
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+            panic("get terminal dimensions");
+        if (term_height != ws.ws_row + 1 || term_width != ws.ws_col) {
+            int grid_num = term_height * term_width;
+            occupied = malloc(grid_num * sizeof(bool));
+            grid = malloc(grid_num * sizeof(wchar_t));
+        } else {
+            memset(occupied, 0, term_height * term_width * sizeof(bool));
+            memset(grid, 0, term_height * term_width * sizeof(wchar_t));
+        }
         c = ' ';
         read(STDIN_FILENO, &c, 1);
         switch (c) {
@@ -148,12 +183,23 @@ int main() {
         default:
             break;
         }
+        // clear screen
         printf("\x1b[2J");
         printf("\x1b[H");
-        occupied = malloc((term_height * term_width) * sizeof(bool));
-        llist_forall(windows, draw, Box, occupied);
+        llist_forall(windows, grid_render, Box);
+        setlocale(LC_ALL, "C.UTF-8");
+        for (int row = 1; row < term_height; row++) {
+            for (int col = 1; col < term_width; col++) {
+                wchar_t wc = grid_get_wchar(row, col);
+                if (wc != L'\0')
+                    putwchar(wc);
+            }
+            putchar('\n');
+        }
     }
     free(occupied);
     llist_free(&windows);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1)
+        panic("tcsetattr");
     return 0;
 }
