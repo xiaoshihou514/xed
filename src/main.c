@@ -39,7 +39,7 @@ void resize_box(Box *b, double h_factor, double w_factor) {
     b->height = (int)(b->height * h_factor);
 }
 
-void logprintf(const char *format, ...) {
+void logprintfln(const char *format, ...) {
     char buf[100];
 
     va_list args;
@@ -63,14 +63,12 @@ void logclose() {
 
 // terminal interaction
 void disable_raw_mode() {
-    logprintf("disable raw mode");
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1) {
         panic("tcsetattr");
     }
 }
 
 void enable_raw_mode() {
-    logprintf("enable raw mode");
     if (tcgetattr(STDIN_FILENO, &original)) {
         panic("tcgetattr");
     }
@@ -98,13 +96,12 @@ void occupy(int row, int col) {
     occupied[term_width * (row - 1) + col - 1] = true;
 }
 
-void grid_put_wchar(int row, int col, const wchar_t thing) {
-    grid[term_width * (row - 1) + col - 1] = thing;
-    // logprintf("%d-%d: %lc", row, col, thing);
-}
-
 wchar_t grid_get_wchar(int row, int col) {
     return grid[term_width * (row - 1) + col - 1];
+}
+
+void grid_put_wchar(int row, int col, const wchar_t thing) {
+    grid[term_width * (row - 1) + col - 1] = thing;
 }
 
 void maybe_draw(int row, int col, const wchar_t thing) {
@@ -114,7 +111,7 @@ void maybe_draw(int row, int col, const wchar_t thing) {
         return;
 
     if (row > 35 || col > 138) {
-        // logprintf("%d-%d: %lc", term_height, term_width, thing);
+        logprintfln("maybe_draw: %d-%d: %lc", row, col, thing);
     }
 
     if (!occupied_at(row, col, occupied)) {
@@ -176,6 +173,12 @@ int main() {
     }
 
     // setup testing windows
+    Box canvas = (Box){
+        .arow = 0,
+        .acol = 0,
+        .width = term_width,
+        .height = term_height,
+    };
     LinkedList windows = llist_new;
     llist_push(&windows,
                &(Box){.arow = 12, .acol = 2, .width = 34, .height = 12});
@@ -185,12 +188,7 @@ int main() {
                              .width = 44,
                              .height = 20,
                          });
-    llist_push(&windows, &(Box){
-                             .arow = 0,
-                             .acol = 0,
-                             .width = term_width,
-                             .height = term_height,
-                         });
+    llist_push(&windows, &canvas);
     llist_forall(windows, grid_render, Box);
 
     enable_raw_mode();
@@ -205,12 +203,19 @@ int main() {
         }
 
         if (term_height != ws.ws_row + 1 || term_width != ws.ws_col + 1) {
-            logprintf("this should not be reachable");
+            // update related variables
             term_height = ws.ws_row + 1;
             term_width = ws.ws_col + 1;
             grid_num = term_height * term_width;
+
+            // reset the occupancy matrix and the grid
             occupied = malloc(grid_num * sizeof(bool));
             grid = malloc(grid_num * sizeof(wchar_t));
+
+            // important: resize the canvas window, since it is depended on to
+            // draw all the spaces that other windows are not using
+            canvas.width = term_width;
+            canvas.height = term_height;
         }
         memset(occupied, 0, grid_num * sizeof(bool));
         memset(grid, 0, grid_num * sizeof(wchar_t));
@@ -242,7 +247,6 @@ int main() {
         for (int row = 1; row < term_height; row++) {
             for (int col = 1; col < term_width; col++) {
                 wchar_t wc = grid_get_wchar(row, col);
-                // if (wc != L'\0' && wc != L' ') {
                 if (wc != L'\0') {
                     printf("%lc", wc);
                 }
