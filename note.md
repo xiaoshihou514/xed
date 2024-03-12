@@ -3,14 +3,15 @@
 ## Idea
 
     - Core written in C
-    - extended using ruby
+    - extended using ___ ?
     - tree-sitter
     - lsp
     - vim bindings
 
 ## TODOs
 
-    - utf-8 support
-    - gap buffer
+    - proper rendering of windows
     - buffer
-    - proper rendering of windows: borders, window stack, relative line numbers...
+    - gap buffer
+    - utf-8 support
+    - fancy decorators: numbers, stl, winbar...

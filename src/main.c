@@ -1,5 +1,6 @@
 #include "lib/linked_list.h"
 #include <locale.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,8 +12,11 @@
 // data
 int term_width;
 int term_height;
+int grid_num;
 bool *occupied;
 wchar_t *grid;
+FILE *logfile;
+struct termios original;
 
 typedef struct {
     int arow;
@@ -21,9 +25,72 @@ typedef struct {
     int height;
 } Box;
 
+// util
+void panic(const char *reason) {
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
+
+    perror(reason);
+    exit(1);
+}
+
+void resize_box(Box *b, double h_factor, double w_factor) {
+    b->width = (int)(b->width * w_factor);
+    b->height = (int)(b->height * h_factor);
+}
+
+void logprintf(const char *format, ...) {
+    char buf[100];
+
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(buf, 100, format, args);
+    va_end(args);
+    buf[written] = '\n';
+    buf[written + 1] = '\0';
+
+    if (logfile == nullptr) {
+        panic("log");
+    }
+    fwrite(buf, written + 1, sizeof(char), logfile);
+}
+
+void logclose() {
+    fflush(logfile);
+    fclose(logfile);
+    logfile = nullptr;
+}
+
+// terminal interaction
+void disable_raw_mode() {
+    logprintf("disable raw mode");
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1) {
+        panic("tcsetattr");
+    }
+}
+
+void enable_raw_mode() {
+    logprintf("enable raw mode");
+    if (tcgetattr(STDIN_FILENO, &original)) {
+        panic("tcgetattr");
+    }
+
+    struct termios raw = original;
+    raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    raw.c_oflag &= ~(OPOST);
+    raw.c_cflag |= (CS8);
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 1;
+
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
+        panic("tcsetattr");
+    }
+}
+
 // draw
 bool occupied_at(int row, int col, bool occupied[static 1]) {
-    // row and col are 1, 1 indexed
+    // row and col are 1 indexed
     return occupied[term_width * (row - 1) + col - 1];
 }
 
@@ -33,10 +100,11 @@ void occupy(int row, int col) {
 
 void grid_put_wchar(int row, int col, const wchar_t thing) {
     grid[term_width * (row - 1) + col - 1] = thing;
+    // logprintf("%d-%d: %lc", row, col, thing);
 }
 
 wchar_t grid_get_wchar(int row, int col) {
-    return grid[(row - 1) * term_width + col - 1];
+    return grid[term_width * (row - 1) + col - 1];
 }
 
 void maybe_draw(int row, int col, const wchar_t thing) {
@@ -44,6 +112,11 @@ void maybe_draw(int row, int col, const wchar_t thing) {
         return;
     if (col < 1 || col >= term_width)
         return;
+
+    if (row > 35 || col > 138) {
+        // logprintf("%d-%d: %lc", term_height, term_width, thing);
+    }
+
     if (!occupied_at(row, col, occupied)) {
         occupy(row, col);
         grid_put_wchar(row, col, thing);
@@ -81,21 +154,6 @@ void grid_render(Box box[static 1]) {
     printf("\x1b[%d;%dH", term_height, 1);
 }
 
-// util
-
-void panic(const char *reason) {
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
-
-    perror(reason);
-    exit(1);
-}
-
-void resize_box(Box *b, double h_factor, double w_factor) {
-    b->width = (int)(b->width * w_factor);
-    b->height = (int)(b->height * h_factor);
-}
-
 // main
 int main() {
     setlocale(LC_ALL, "C.UTF-8");
@@ -104,13 +162,20 @@ int main() {
         panic("get terminal dimensions");
     term_height = ws.ws_row + 1;
     term_width = ws.ws_col + 1;
-    int grid_num = (term_height * term_width);
+    grid_num = term_height * term_width;
     occupied = malloc(grid_num * sizeof(bool));
     grid = malloc(grid_num * sizeof(wchar_t));
 
     // hide cursor
     printf("\x1b[?25l");
 
+    // open up logfile
+    logfile = fopen("/tmp/xed.log", "w");
+    if (logfile == nullptr) {
+        panic("open log file");
+    }
+
+    // setup testing windows
     LinkedList windows = llist_new;
     llist_push(&windows,
                &(Box){.arow = 12, .acol = 2, .width = 34, .height = 12});
@@ -128,39 +193,27 @@ int main() {
                          });
     llist_forall(windows, grid_render, Box);
 
-    // enable raw mode
-    struct termios original;
-    if (tcgetattr(STDIN_FILENO, &original))
-        panic("tcgetattr");
-
-    struct termios raw = original;
-    raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-    raw.c_oflag &= ~(OPOST);
-    raw.c_cflag |= (CS8);
-    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-    raw.c_cc[VMIN] = 0;
-    raw.c_cc[VTIME] = 1;
-
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
-        panic("tcsetattr");
+    enable_raw_mode();
 
     // main loop
     char c;
     bool quit = false;
     while (!quit) {
         // handle resize
-        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
             panic("get terminal dimensions");
-        if (term_height != ws.ws_row + 1 || term_width != ws.ws_col) {
+        }
+
+        if (term_height != ws.ws_row + 1 || term_width != ws.ws_col + 1) {
+            logprintf("this should not be reachable");
             term_height = ws.ws_row + 1;
             term_width = ws.ws_col + 1;
-            int grid_num = term_height * term_width;
+            grid_num = term_height * term_width;
             occupied = malloc(grid_num * sizeof(bool));
             grid = malloc(grid_num * sizeof(wchar_t));
-        } else {
-            memset(occupied, 0, term_height * term_width * sizeof(bool));
-            memset(grid, 0, term_height * term_width * sizeof(wchar_t));
         }
+        memset(occupied, 0, grid_num * sizeof(bool));
+        memset(grid, 0, grid_num * sizeof(wchar_t));
         c = ' ';
         read(STDIN_FILENO, &c, 1);
         switch (c) {
@@ -189,15 +242,19 @@ int main() {
         for (int row = 1; row < term_height; row++) {
             for (int col = 1; col < term_width; col++) {
                 wchar_t wc = grid_get_wchar(row, col);
-                if (wc != L'\0')
+                // if (wc != L'\0' && wc != L' ') {
+                if (wc != L'\0') {
                     printf("%lc", wc);
+                }
             }
             printf("\r\n");
         }
     }
     free(occupied);
     llist_free(&windows);
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1)
-        panic("tcsetattr");
+    disable_raw_mode();
+    // show cursor again
+    printf("\x1b[?25h");
+    logclose();
     return 0;
 }
